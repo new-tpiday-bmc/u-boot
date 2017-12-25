@@ -12,6 +12,8 @@
 #include <post.h>
 #include <linux/compiler.h>
 #include <errno.h>
+#include <asm/arch/ast_scu.h>
+#include <asm/io.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -415,6 +417,20 @@ static struct serial_device *get_current(void)
  */
 int serial_init(void)
 {
+#if defined(CONFIG_ROUTE_UART5_TO_IO1)
+	unsigned long reg;
+	reg = readl(AST_LPC_BASE | 0x9C);
+	 //route UART5 to IO1
+	reg &= ~(BIT(0) | BIT(1) | BIT(2));
+	reg |= BIT(2);
+	//route IO1 to UART5
+	reg &= ~(BIT(28) | BIT(29) | BIT(30) | BIT(31));
+	reg |= BIT(28);
+	writel(reg, AST_LPC_BASE | 0x9C);
+#else
+	//default route UART5 connect to IO5(BMC_UART5_TXD/BMC_UART5_RXD)
+	writel(0x0, AST_LPC_BASE | 0x9C);
+#endif
 	gd->flags |= GD_FLG_SERIAL_READY;
 	return get_current()->start();
 }
