@@ -431,6 +431,27 @@ int serial_init(void)
 	reg &= ~(BIT(28) | BIT(29) | BIT(30) | BIT(31));
 	reg |= BIT(28);
 	writel(reg, AST_LPC_BASE | 0x9C);
+
+	#if defined(CONFIG_ROUTE_UART1_TO_IO5)
+		//route UART1 to IO5
+		reg = readl(AST_LPC_BASE | 0x9C);
+		reg &= ~(BIT(12) | BIT(13) | BIT(14));
+		reg |= BIT(12);
+		writel(reg, AST_LPC_BASE | 0x9C);
+		/*
+			route IO5 to UART1
+		*/
+		//route IO5 to IO6
+		reg = readl(AST_LPC_BASE | 0x98);
+		reg &= ~(BIT(8) | BIT(9) | BIT(10) | BIT(11));
+		reg |= (BIT(8) | BIT(11));
+		writel(reg, AST_LPC_BASE | 0x98);
+		//route IO6 to UART1
+		reg = readl(AST_LPC_BASE | 0x9C);
+		reg &= ~(BIT(16) | BIT(17) | BIT(18));
+		reg |= (BIT(16) | BIT(17) | BIT(18));
+		writel(reg, AST_LPC_BASE | 0x9C);
+	#endif
 #else
 	//default route UART5 connect to IO5(BMC_UART5_TXD/BMC_UART5_RXD)
 	writel(0x0, AST_LPC_BASE | 0x9C);

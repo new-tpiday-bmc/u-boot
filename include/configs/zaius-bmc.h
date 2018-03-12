@@ -43,5 +43,19 @@
 
 /* Route UART5 to IO1 */
 #define CONFIG_ROUTE_UART5_TO_IO1
+/*
+	CONFIG_ROUTE_UART1_TO_IO5 would depend on CONFIG_ROUTE_UART5_TO_IO1 for Zaius,
+	because HOST with UART1 and BMC with UART5 would conflict with IO1.
+
+	root cause:
+		Accord of CONFIG_ROUTE_UART5_TO_IO1, HOST with UART1 and BMC with UART5 would
+	use same tx/rx  with IO1 to cause repeated character.
+
+	soultion:
+		HOST with UART1 would use IO5, and BMC with UART5 would use IO1.
+*/
+#if defined(CONFIG_ROUTE_UART5_TO_IO1)
+	#define CONFIG_ROUTE_UART1_TO_IO5
+#endif
 
 #endif	/* __AST_G5_NCSI_CONFIG_H */
