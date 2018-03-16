@@ -49,13 +49,93 @@
 #include <asm/arch/ast-sdmc.h>
 #include <asm/io.h>
 
+#include <asm/arch/platform.h>
+#include <asm/arch/regs-ahbc.h>
+#include <asm/arch/regs-scu.h>
+#include <asm/io.h>
+
 DECLARE_GLOBAL_DATA_PTR;
 
 int board_init(void)
 {
+        /* adress of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
+        gd->flags = 0;
+        WDT2_counter_setting();
 
 	return 0;
+}
+
+int misc_init_r(void)
+{
+        u32 reg;
+        unsigned long duty = 0xffffffff;
+
+        /* Unlock AHB controller */
+        writel(AHBC_PROTECT_UNLOCK, AST_AHBC_BASE);
+
+        /* Map DRAM to 0x00000000 */
+        reg = readl(AST_AHBC_BASE + AST_AHBC_ADDR_REMAP);
+        writel(reg | BIT(0), AST_AHBC_BASE + AST_AHBC_ADDR_REMAP);
+
+        /* Unlock SCU */
+        writel(SCU_PROTECT_UNLOCK, AST_SCU_BASE);
+
+        /* Set PWM dytu to 100% */
+         reg = *((volatile ulong*) 0x1e6e2088);
+         reg |= 0x3e;  // enable PWM1~6 function pin
+         *((volatile ulong*) 0x1e6e2088) = reg;
+
+        // reset PWM
+        reg = *((volatile ulong*) 0x1e6e2004);
+        reg &= ~(0x200); /* stop the reset */
+        *((volatile ulong*) 0x1e6e2004) = reg;
+       // enable clock and and set all tacho/pwm to type M
+        *((volatile ulong*) 0x1e786000) = 1;
+        *((volatile ulong*) 0x1e786040) = 1;
+       /* set clock division and period of type M/N */
+       /* 0xFF11 --> 24000000 / (2 * 2 * 256) = 23437.5 Hz */
+       *((volatile ulong*) 0x1e786004) = 0xFF11FF11;
+       *((volatile ulong*) 0x1e786044) = 0xFF11FF11;
+       
+       /* close boot pwm0-3 duty 255, modfiy 256*19%=50pwm=0x0030 / 0x30FF */
+       //PWM0-1
+       *((volatile ulong*) 0x1e786008) = 0x30FF30FF;
+       //PWM2-3
+       *((volatile ulong*) 0x1e78600c) = 0x00300030;
+       //PWM4-5
+       *((volatile ulong*) 0x1e786048) = duty;
+       //PWM6-7
+       *((volatile ulong*) 0x1e78604C) = duty;
+
+       *((volatile ulong*) 0x1e786010) = 0x10000001;
+       *((volatile ulong*) 0x1e786018) = 0x10000001;
+       *((volatile ulong*) 0x1e786014) = 0x10000000;
+       *((volatile ulong*) 0x1e78601c) = 0x10000000;
+       *((volatile ulong*) 0x1e786020) = 0;
+       *((volatile ulong*) 0x1e786000) = 0xf01;
+       *((volatile ulong*) 0x1e786040) = 0xf01;
+
+    /* Set GPIOF5 to Output and make sure GPIOF5 keep High */
+    reg = readl(AST_GPIO_BASE + 0x24); //Direction Register
+    reg |= 0x00002000; //set GPIOF5 to output
+    reg = readl(AST_GPIO_BASE + 0x20); //Data Register
+    reg |= 0x00002000; //set GPIOF5 to High
+
+        /*
+         * The original file contained these comments.
+         * TODO: verify the register write does what it claims
+         *
+         * LHCLK = HPLL/8
+         * PCLK  = HPLL/8
+         * BHCLK = HPLL/8
+         */
+        reg = readl(AST_SCU_BASE + AST_SCU_CLK_SEL);
+        reg &= 0x1c0fffff;
+        reg |= 0x61800000;
+        writel(reg, AST_SCU_BASE + AST_SCU_CLK_SEL);
+
+        return 0;
 }
 
 int dram_init(void)
@@ -90,3 +170,10 @@ void hw_watchdog_reset(void)
 	writel(0x4755, AST_WDT2_BASE + 0x08);
 }
 #endif /* CONFIG_WATCHDOG */
+
+void WDT2_counter_setting()
+{
+    *((volatile ulong *)0x1e785024) = 0x0aba9500;  // change timeout to 180 seconds
+    *((volatile ulong *)0x1e785028) = 0x00004755;  // magic number to trigger reload
+    return;
+}
