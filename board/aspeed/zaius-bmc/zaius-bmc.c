@@ -58,7 +58,7 @@ void show_boot_progress(int progress)
 
 int board_init(void)
 {
-	unsigned long reg;
+        unsigned long reg;
 
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
@@ -75,7 +75,48 @@ int board_init(void)
 
 	//disable watchdog2 to bump to linux
 	writel(0x0, 0x1e78502c);
+
 	return 0;
+}
+
+int misc_init_r(void)
+{
+        u32 reg;
+        unsigned long duty = 0xffffffff;
+
+        /* Set PWM duty to 19% */
+        reg = *((volatile ulong*) 0x1e6e2088);
+        reg |= 0x3e;  // enable PWM1~6 function pin
+        *((volatile ulong*) 0x1e6e2088) = reg;
+
+        // reset PWM
+        reg = *((volatile ulong*) 0x1e6e2004);
+        reg &= ~(0x200); /* stop the reset */
+        *((volatile ulong*) 0x1e6e2004) = reg;
+
+        // enable clock and and set all tacho/pwm to type M
+        *((volatile ulong*) 0x1e786000) = 1;
+        *((volatile ulong*) 0x1e786040) = 1;
+        /* set clock division and period of type M/N */
+        /* 0xFF11 --> 24000000 / (2 * 2 * 256) = 23437.5 Hz */
+        *((volatile ulong*) 0x1e786004) = 0xFF11FF11;
+        *((volatile ulong*) 0x1e786044) = 0xFF11FF11;
+
+        /* 256*19% =50pwm =0x0030 || 0x30FF */
+        //PWM0-1
+        *((volatile ulong*) 0x1e786008) = 0x00300030;
+        //PWM2-3
+        *((volatile ulong*) 0x1e78600c) = 0x00300030;
+
+        *((volatile ulong*) 0x1e786010) = 0x10000001;
+        *((volatile ulong*) 0x1e786018) = 0x10000001;
+        *((volatile ulong*) 0x1e786014) = 0x10000000;
+        *((volatile ulong*) 0x1e78601c) = 0x10000000;
+        *((volatile ulong*) 0x1e786020) = 0;
+        *((volatile ulong*) 0x1e786000) = 0xf01;
+        *((volatile ulong*) 0x1e786040) = 0xf01;
+
+        return 0;
 }
 
 int dram_init(void)
