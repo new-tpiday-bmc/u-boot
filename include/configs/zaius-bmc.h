@@ -41,4 +41,7 @@
 #define CONFIG_DRAM_ECC
 #define	CONFIG_DRAM_ECC_SIZE		0x20000000
 
+/* Route UART5 to IO2 */
+#define CONFIG_ROUTE_UART5_TO_IO2
+
 #endif	/* __AST_G5_NCSI_CONFIG_H */
