@@ -17,6 +17,8 @@
 /* SET PWM DUTY */
 #define CONFIG_SET_PWM_DUTY
 
+#define CONFIG_MISC_INIT_R
+
 #include <configs/ast-common.h>
 
 /* arm1176/start.S */

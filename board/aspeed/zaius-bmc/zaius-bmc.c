@@ -38,8 +38,11 @@
 #include <netdev.h>
 #include <net.h>
 
+#include <asm/arch/platform.h>
 #include <asm/arch/ast_scu.h>
 #include <asm/arch/ast-sdmc.h>
+#include <asm/arch/regs-ahbc.h>
+#include <asm/arch/regs-scu.h>
 #include <asm/io.h>
 
 /* TODO: Move this to GPIO specific file */
@@ -58,10 +61,7 @@ void show_boot_progress(int progress)
 
 int board_init(void)
 {
-#if defined(CONFIG_SET_PWM_DUTY)
 	unsigned long reg;
-        unsigned long duty = 0x00200020;
-        printf("init duty = %x\n",reg);
 
         /* adress of boot parameters */
         gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
@@ -78,19 +78,31 @@ int board_init(void)
 
         //disable watchdog2 to bump to linux
         writel(0x0, 0x1e78502c);
-        
-        printf("start set PWM duty\n");
+
+        return 0;
+}
+
+int misc_init_r(void)
+{
+        u32 reg;
+        unsigned long duty = 0x00200020;
+        debug("init duty = %x\n",reg);
+       
+        /* Unlock SCU */
++	writel(SCU_PROTECT_UNLOCK, AST_SCU_BASE);
+ 
+        debug("start set PWM duty\n");
         /* Set PWM duty to 19% */
         reg = *((volatile ulong*) 0x1e6e2088);
         reg |= 0x3e;  // enable PWM1~6 function pin
         *((volatile ulong*) 0x1e6e2088) = reg;
-        printf("0x1e6e2088 = %x\n",reg);
+        debug("0x1e6e2088 = %x\n",reg);
 
         // reset PWM
         reg = *((volatile ulong*) 0x1e6e2004);
         reg &= ~(0x200); /* stop the reset */
         *((volatile ulong*) 0x1e6e2004) = reg;
-        printf("0x1e6e2004 = %x\n",reg);
+        debug("0x1e6e2004 = %x\n",reg);
 
         // enable clock and and set all tacho/pwm to type M
         *((volatile ulong*) 0x1e786000) = 1;
@@ -103,16 +115,16 @@ int board_init(void)
         /* 256*19% =50pwm =0x0030 || 0x30FF */
         //PWM0-1
         *((volatile ulong*) 0x1e786008) = duty;
-        printf("0x1e786008 = %x\n",duty);
+        debug("0x1e786008 = %x\n",duty);
         //PWM2-3
         *((volatile ulong*) 0x1e78600c) = duty;
-        printf("0x1e78600c = %x\n",duty);
+        debug("0x1e78600c = %x\n",duty);
         //PWM4-5
         *((volatile ulong*) 0x1e786048) = duty;
-        printf("0x1e786048 = %x\n",duty);
+        debug("0x1e786048 = %x\n",duty);
         //PWM6-7
         *((volatile ulong*) 0x1e78604C) = duty;
-        printf("0x1e78604C = %x\n",duty);
+        debug("0x1e78604C = %x\n",duty);
 
         *((volatile ulong*) 0x1e786010) = 0x10000001;
         *((volatile ulong*) 0x1e786018) = 0x10000001;
@@ -121,25 +133,6 @@ int board_init(void)
         *((volatile ulong*) 0x1e786020) = 0;
         *((volatile ulong*) 0x1e786000) = 0xf01;
         *((volatile ulong*) 0x1e786040) = 0xf01;
-
-#else
-
-	/* adress of boot parameters */
-	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
-    
-	//The system boot status LED  lit up by u-boot#GPIOD5
-	//set GPIOD5 data low
-	reg = readl(AST_GPIO_BASE | 0x00);
-	reg = reg & ~(1<<29);
-	writel(reg, AST_GPIO_BASE | 0x00);
-	//set GPIOD5 direction output
-	reg = readl(AST_GPIO_BASE | 0x04);
-	reg = reg | (1<<29);
-	writel(reg, AST_GPIO_BASE | 0x04);
-
-	//disable watchdog2 to bump to linux
-	writel(0x0, 0x1e78502c);
-#endif
 	return 0;
 }
 
