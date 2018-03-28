@@ -16,6 +16,9 @@
 
 #define CONFIG_HW_WATCHDOG
 
+/* Set PWM duty */
+#define CONFIG_MISC_INIT_R
+
 #include <configs/ast-common.h>
 
 /* arm1176/start.S */

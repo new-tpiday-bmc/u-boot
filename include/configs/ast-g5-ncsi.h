@@ -14,6 +14,9 @@
 #define CONFIG_ARCH_AST2500
 #define CONFIG_SYS_LOAD_ADDR		0x83000000
 
+/* Set PWM duty */
+#define CONFIG_MISC_INIT_R
+
 #include <configs/ast-common.h>
 
 /* arm1176/start.S */
