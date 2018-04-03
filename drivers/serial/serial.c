@@ -419,8 +419,12 @@ int serial_init(void)
 {
 #if defined(CONFIG_ROUTE_UART5_TO_IO1)
 	unsigned long reg;
+	//set GPIOL6&GPIOL7 multi-function control as TXD1&RXD1
+	reg = readl(AST_SCU_BASE | 0x84);
+	reg |= (BIT(22) | BIT(23));
+	writel(reg, AST_SCU_BASE | 0x84);
+	//route UART5 to IO1
 	reg = readl(AST_LPC_BASE | 0x9C);
-	 //route UART5 to IO1
 	reg &= ~(BIT(0) | BIT(1) | BIT(2));
 	reg |= BIT(2);
 	//route IO1 to UART5
