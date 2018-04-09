@@ -427,6 +427,10 @@ int serial_init(void)
 	reg = readl(AST_LPC_BASE | 0x9C);
 	reg &= ~(BIT(0) | BIT(1) | BIT(2));
 	reg |= BIT(2);
+        //route UART1 to IO5
+        reg = readl(AST_LPC_BASE | 0x9C);
+        reg &= ~(BIT(12) | BIT(13) | BIT(14));
+        reg |= BIT(12);
 	//route IO1 to UART5
 	reg &= ~(BIT(28) | BIT(29) | BIT(30) | BIT(31));
 	reg |= BIT(28);
